@@ -36,10 +36,48 @@ from QUANTAXIS.QAFetch import QATushare as QATushare
 from QUANTAXIS.QAFetch import QATdx as QATdx
 from QUANTAXIS.QAFetch import QAThs as QAThs
 from QUANTAXIS.QAFetch import QAQuery
-from QUANTAXIS.QAFetch import QAQuery_Advance as QAMongo
+from QUANTAXIS.QAFetch import QAQuery_Advance as QAQueryAdv
+from QUANTAXIS.QAFetch import QAEastMoney as QAEM
 from QUANTAXIS.QAUtil.QAParameter import FREQUENCE, MARKET_TYPE, DATASOURCE, OUTPUT_FORMAT, DATABASE_TABLE
+from QUANTAXIS.QAUtil.QASql import QA_util_sql_mongo_setting
 
 
+class QA_Fetcher():
+    def __init__(self, uri='mongodb://192.168.4.248:27017/quantaxis', username='',password=''):
+        """
+        初始化的时候 会初始化
+        """
+
+        self.database = QA_util_sql_mongo_setting(uri).quantaxis
+        self.history = {}
+        self.best_ip=QATdx.select_best_ip()
+
+    def change_ip(self, uri):
+        self.database = QA_util_sql_mongo_setting(uri).quantaxis
+        return self
+
+    def get_quotation(self, code=None, start=None, end=None, frequence=None, market=None, source=None, output=None):
+        """        
+        Arguments:
+            code {str/list} -- 证券/股票的代码
+            start {str} -- 开始日期
+            end {str} -- 结束日期
+            frequence {enum} -- 频率 QA.FREQUENCE
+            market {enum} -- 市场 QA.MARKET_TYPE
+            source {enum} -- 来源 QA.DATASOURCE
+            output {enum} -- 输出类型 QA.OUTPUT_FORMAT
+        """
+        pass
+
+    def get_info(self,code,frequence,market,source,output):
+        if source is DATASOURCE.TDX:
+            res=QATdx.QA_fetch_get_stock_info(code,self.best_ip)
+            return res
+        elif source is DATASOURCE.MONGO:
+            res=QAQuery.QA_fetch_stock_info(code,format=output,collections=self.database.stock_info)
+            return res
+
+# todo 🛠 output 参数没有用到， 默认返回的 是 QA_DataStruct
 def QA_quotation(code, start, end, frequence, market, source, output):
     """一个统一的fetch
 
@@ -56,14 +94,14 @@ def QA_quotation(code, start, end, frequence, market, source, output):
     if market is MARKET_TYPE.STOCK_CN:
         if frequence is FREQUENCE.DAY:
             if source is DATASOURCE.MONGO:
-                res = QAMongo.QA_fetch_stock_day_adv(code, start, end)
+                res = QAQueryAdv.QA_fetch_stock_day_adv(code, start, end)
             elif source is DATASOURCE.TDX:
                 res = QATdx.QA_fetch_get_stock_day(code, start, end, '00')
             elif source is DATASOURCE.TUSHARE:
                 res = QATushare.QA_fetch_get_stock_day(code, start, end, '00')
         elif frequence in [FREQUENCE.ONE_MIN, FREQUENCE.FIVE_MIN, FREQUENCE.FIFTEEN_MIN, FREQUENCE.THIRTY_MIN, FREQUENCE.SIXTY_MIN]:
             if source is DATASOURCE.MONGO:
-                res = QAMongo.QA_fetch_stock_min_adv(
+                res = QAQueryAdv.QA_fetch_stock_min_adv(
                     code, start, end, frequence=frequence)
             elif source is DATASOURCE.TDX:
                 res = QATdx.QA_fetch_get_stock_min(
@@ -71,7 +109,17 @@ def QA_quotation(code, start, end, frequence, market, source, output):
         elif frequence is FREQUENCE.TICK:
             if source is DATASOURCE.TDX:
                 res = QATdx.QA_fetch_get_stock_transaction(code, start, end)
-    print(type(res))
+
+    #指数代码和股票代码是冲突重复的，  sh000001 上证指数  000001 是不同的
+    elif market is MARKET_TYPE.INDEX_CN:
+        if frequence is FREQUENCE.DAY:
+            if source is DATASOURCE.MONGO:
+                res = QAQueryAdv.QA_fetch_index_day_adv(code, start, end)
+
+    elif market is MARKET_TYPE.OPTION_CN:
+        if source is DATASOURCE.MONGO:
+            res = QAQueryAdv.QA_fetch_option_day_adv(code,start,end)
+    #print(type(res))
     return res
 
 

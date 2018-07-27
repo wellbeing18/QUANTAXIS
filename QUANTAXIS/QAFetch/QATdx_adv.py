@@ -33,7 +33,7 @@ import pandas as pd
 from pytdx.hq import TdxHq_API
 
 from QUANTAXIS.QAUtil.QADate_trade import QA_util_if_tradetime
-from QUANTAXIS.QAUtil.QASetting import DATABASE, info_ip_list
+from QUANTAXIS.QAUtil.QASetting import DATABASE, stock_ip_list
 from QUANTAXIS.QAUtil.QASql import QA_util_sql_mongo_sort_ASCENDING
 from QUANTAXIS.QAUtil.QATransform import QA_util_to_json_from_pandas
 
@@ -133,12 +133,12 @@ class QA_Tdx_Executor():
     def api_worker(self):
         data = []
         if self._queue.qsize() < 80:
-            for item in info_ip_list:
-                _sec = self._test_speed(item)
+            for item in stock_ip_list:
+                _sec = self._test_speed(ip=item['ip'], port=item['port'])
                 if _sec < 0.1:
                     try:
                         self._queue.put(TdxHq_API(heartbeat=False).connect(
-                            ip=item, time_out=0.05))
+                            ip=item['ip'], port=item['port'], time_out=0.05))
                     except:
                         pass
         else:
@@ -235,9 +235,7 @@ def get_bar():
     print(x._queue.qsize())
     print(x.get_available())
 
-
-
-    for i in range(100000):
+    while True:
         _time = datetime.datetime.now()
         if QA_util_if_tradetime(_time):  # 如果在交易时间
             data = x.get_security_bar_concurrent(code, 'day', 1)
@@ -249,9 +247,12 @@ def get_bar():
                 x._queue.qsize()))
             print('Program Last Time {}'.format(
                 (datetime.datetime.now() - _time1).total_seconds()))
+
+            return data
         else:
             print('Not Trading time {}'.format(_time))
             time.sleep(1)
+
 
 def get_day_once():
 
@@ -260,6 +261,7 @@ def get_day_once():
     code = QA_fetch_stock_block_adv().code
     x = QA_Tdx_Executor()
     return x.get_security_bar_concurrent(code, 'day', 1)
+
 
 def bat():
 
@@ -301,11 +303,11 @@ def bat():
 if __name__ == '__main__':
     import time
     _time1 = datetime.datetime.now()
-    from QUANTAXIS.QAFetch.QAQuery_Advance import QA_fetch_stock_block_adv
-    code = QA_fetch_stock_block_adv().code
+    from QUANTAXIS.QAFetch.QAQuery_Advance import QA_fetch_stock_list_adv
+    code = QA_fetch_stock_list_adv().code.tolist()
 
-    DATABASE.realtime.create_index([('code', QA_util_sql_mongo_sort_ASCENDING),
-                                    ('datetime', QA_util_sql_mongo_sort_ASCENDING)])
+    # DATABASE.realtime.create_index([('code', QA_util_sql_mongo_sort_ASCENDING),
+    #                                 ('datetime', QA_util_sql_mongo_sort_ASCENDING)])
 
     # print(len(code))
     # x = QA_Tdx_Executor()

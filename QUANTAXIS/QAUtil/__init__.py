@@ -25,7 +25,7 @@
 yutiansut
 util tool
 """
-
+# path
 
 # bar
 from QUANTAXIS.QAUtil.QABar import (QA_util_make_hour_index,
@@ -52,11 +52,15 @@ from QUANTAXIS.QAUtil.QADate_trade import (QA_util_date_gap,
                                            QA_util_get_trade_range,
                                            QA_util_if_trade,
                                            QA_util_if_tradetime,
+                                           QA_util_get_next_day,
+                                           QA_util_get_last_day,
                                            trade_date_sse)
 # list function
 from QUANTAXIS.QAUtil.QAList import (QA_util_diff_list,
                                      QA_util_multi_demension_list)
 
+# code function
+from QUANTAXIS.QAUtil.QACode import QA_util_code_tostr, QA_util_code_tolist
 # dict function
 from QUANTAXIS.QAUtil.QADict import QA_util_dict_remove_key
 # log
@@ -74,8 +78,9 @@ from QUANTAXIS.QAUtil.QAParameter import (MARKET_TYPE, ORDER_STATUS, TRADE_STATU
 # RANDOM class
 from QUANTAXIS.QAUtil.QARandom import QA_util_random_with_topic
 # QUANTAXIS Setting
-from QUANTAXIS.QAUtil.QASetting import (QA_Setting, DATABASE, future_ip_list,
-                                        info_ip_list, stock_ip_list)
+
+from QUANTAXIS.QAUtil.QASetting import (QA_Setting, DATABASE, future_ip_list, QASETTING,
+                                        info_ip_list, stock_ip_list, exclude_from_stock_ip_list)
 # sql
 from QUANTAXIS.QAUtil.QASql import (QA_util_sql_async_mongo_setting,
                                     QA_util_sql_mongo_setting,
@@ -87,6 +92,11 @@ from QUANTAXIS.QAUtil.QATransform import (QA_util_to_json_from_pandas,
                                           QA_util_to_list_from_pandas,
                                           QA_util_to_pandas_from_json,
                                           QA_util_to_pandas_from_list)
+
 # 网络相关
-from QUANTAXIS.QAUtil.QAWeb import QA_util_web_ping
+from QUANTAXIS.QAUtil.QAWebutil import QA_util_web_ping
 from QUANTAXIS.QAUtil.QAMail import QA_util_send_mail
+
+# 文件相关
+
+from QUANTAXIS.QAUtil.QAFile import QA_util_file_md5

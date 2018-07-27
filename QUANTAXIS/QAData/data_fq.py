@@ -28,36 +28,23 @@ import datetime
 
 import pandas as pd
 
-from QUANTAXIS.QAFetch import QA_fetch_get_stock_day, QA_fetch_get_stock_xdxr
-from QUANTAXIS.QAUtil import QA_util_log_info, DATABASE
-
-
-def QA_data_get_qfq(code, start, end):
-    '使用网络数据进行复权/需要联网'
-    xdxr_data = QA_fetch_get_stock_xdxr('tdx', code)
-    bfq_data = QA_fetch_get_stock_day(
-        'tdx', code, '1990-01-01', str(datetime.date.today())).dropna(axis=0)
-    return QA_data_make_qfq(bfq_data[start:end], xdxr_data)
-
-
-def QA_data_get_hfq(code, start, end):
-    '使用网络数据进行复权/需要联网'
-    xdxr_data = QA_fetch_get_stock_xdxr('tdx', code)
-    bfq_data = QA_fetch_get_stock_day(
-        'tdx', code, '1990-01-01', str(datetime.date.today())).dropna(axis=0)
-    return QA_data_make_hfq(bfq_data[start:end], xdxr_data)
+from QUANTAXIS.QAUtil import DATABASE, QA_util_log_info
 
 
 def QA_data_make_qfq(bfq_data, xdxr_data):
     '使用数据库数据进行复权'
-    info = xdxr_data[xdxr_data['category'] == 1]
+    info = xdxr_data.query('category==1')
     bfq_data = bfq_data.assign(if_trade=1)
-    data = pd.concat([bfq_data, info[['category']]
-                      [bfq_data.index[0]:bfq_data.index[-1]]], axis=1)
-    data['if_trade'].fillna(value=0, inplace=True)
-    data = data.fillna(method='ffill')
-    data = pd.concat([data, info[['fenhong', 'peigu', 'peigujia',
-                                  'songzhuangu']][bfq_data.index[0]:bfq_data.index[-1]]], axis=1)
+
+    if len(info) > 0:
+        data = pd.concat([bfq_data, info.loc[bfq_data.index[0]:bfq_data.index[-1], ['category']]], axis=1)
+        data['if_trade'].fillna(value=0, inplace=True)
+        data = data.fillna(method='ffill')
+        data = pd.concat([data, info.loc[bfq_data.index[0]:bfq_data.index[-1], ['fenhong', 'peigu', 'peigujia',
+                                                                                'songzhuangu']]], axis=1)
+    else:
+        data = pd.concat([bfq_data, info.loc[:, ['category', 'fenhong', 'peigu', 'peigujia',
+                                                 'songzhuangu']]], axis=1)
     data = data.fillna(0)
     data['preclose'] = (data['close'].shift(1) * 10 - data['fenhong'] + data['peigu']
                         * data['peigujia']) / (10 + data['peigu'] + data['songzhuangu'])
@@ -68,6 +55,8 @@ def QA_data_make_qfq(bfq_data, xdxr_data):
     data['low'] = data['low'] * data['adj']
     data['close'] = data['close'] * data['adj']
     data['preclose'] = data['preclose'] * data['adj']
+    data['volume'] = data['volume'] / \
+        data['adj'] if 'volume' in data.columns else data['vol']/data['adj']
     try:
         data['high_limit'] = data['high_limit'] * data['adj']
         data['low_limit'] = data['high_limit'] * data['adj']
@@ -79,17 +68,20 @@ def QA_data_make_qfq(bfq_data, xdxr_data):
 
 def QA_data_make_hfq(bfq_data, xdxr_data):
     '使用数据库数据进行复权'
-    info = xdxr_data[xdxr_data['category'] == 1]
+    info = xdxr_data.query('category==1')
     bfq_data = bfq_data.assign(if_trade=1)
-    data = pd.concat([bfq_data, info[['category']]
-                      [bfq_data.index[0]:bfq_data.index[-1]]], axis=1)
 
-    data['if_trade'].fillna(value=0, inplace=True)
-    data = data.fillna(method='ffill')
+    if len(info) > 0:
+        data = pd.concat([bfq_data, info.loc[bfq_data.index[0]:bfq_data.index[-1], ['category']]], axis=1)
 
-    data = pd.concat([data, info[['fenhong', 'peigu', 'peigujia',
-                                  'songzhuangu']][bfq_data.index[0]:bfq_data.index[-1]]], axis=1)
+        data['if_trade'].fillna(value=0, inplace=True)
+        data = data.fillna(method='ffill')
 
+        data = pd.concat([data, info.loc[bfq_data.index[0]:bfq_data.index[-1], ['fenhong', 'peigu', 'peigujia',
+                                                                                'songzhuangu']]], axis=1)
+    else:
+        data = pd.concat([bfq_data, info.loc[:, ['category', 'fenhong', 'peigu', 'peigujia',
+                                                 'songzhuangu']]], axis=1)
     data = data.fillna(0)
     data['preclose'] = (data['close'].shift(1) * 10 - data['fenhong'] + data['peigu']
                         * data['peigujia']) / (10 + data['peigu'] + data['songzhuangu'])
@@ -100,6 +92,8 @@ def QA_data_make_hfq(bfq_data, xdxr_data):
     data['low'] = data['low'] * data['adj']
     data['close'] = data['close'] * data['adj']
     data['preclose'] = data['preclose'] * data['adj']
+    data['volume'] = data['volume'] / \
+        data['adj'] if 'volume' in data.columns else data['vol']/data['adj']
     try:
         data['high_limit'] = data['high_limit'] * data['adj']
         data['low_limit'] = data['high_limit'] * data['adj']
@@ -118,14 +112,17 @@ def QA_data_stock_to_fq(__data, type_='01'):
             data['date'] = pd.to_datetime(data['date'])
             return data.set_index(['date', 'code'], drop=False)
         except:
-            return pd.DataFrame(data=[],columns=['category', 'category_meaning', 'code', 'date', 'fenhong',
-                                         'fenshu', 'liquidity_after', 'liquidity_before', 'name', 'peigu', 'peigujia',
-                                         'shares_after', 'shares_before', 'songzhuangu', 'suogu', 'xingquanjia'])
+            return pd.DataFrame(data=[], columns=['category', 'category_meaning', 'code', 'date', 'fenhong',
+                                                  'fenshu', 'liquidity_after', 'liquidity_before', 'name', 'peigu', 'peigujia',
+                                                  'shares_after', 'shares_before', 'songzhuangu', 'suogu', 'xingquanjia'])
     '股票 日线/分钟线 动态复权接口'
+
+    code = __data.index.remove_unused_levels().levels[1][0] if isinstance(
+        __data.index, pd.core.indexes.multi.MultiIndex) else __data['code'][0]
     if type_ in ['01', 'qfq']:
-        return QA_data_make_qfq(__data, __QA_fetch_stock_xdxr(__data['code'][0]))
+        return QA_data_make_qfq(__data, __QA_fetch_stock_xdxr(code))
     elif type_ in ['02', 'hfq']:
-        return QA_data_make_hfq(__data, __QA_fetch_stock_xdxr(__data['code'][0]))
+        return QA_data_make_hfq(__data, __QA_fetch_stock_xdxr(code))
     else:
         QA_util_log_info('wrong fq type! Using qfq')
-        return QA_data_make_qfq(__data, __QA_fetch_stock_xdxr(__data['code'][0]))
+        return QA_data_make_qfq(__data, __QA_fetch_stock_xdxr(code))

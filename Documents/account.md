@@ -7,6 +7,8 @@
     - [账户/组合/策略的关系](#账户组合策略的关系)
     - [创建自定义的策略](#创建自定义的策略)
     - [深入了解策略的组成](#深入了解策略的组成)
+    - [风险分析模块](#风险分析模块)
+    - [组合视角 PORTFOLIO VIEW](#组合视角-portfolio-view)
 
 <!-- /TOC -->
 @yutiansut
@@ -14,6 +16,8 @@
 2018/1/26
     
 在1.0版本以后,回测的策略是以继承账户类来进行的
+
+![](http://pic.yutiansut.com/%E9%87%8D%E6%9E%84%E6%96%87%E6%A1%A3-%E8%B4%A6%E6%88%B7.png)
 
 ## 账户/组合/策略的关系
 ```json
@@ -178,3 +182,58 @@ event 事件封装了数据和方法*(包括 所需的行情数据/下单接口)
 
 
 ```
+
+
+
+## 风险分析模块
+
+QA_Risk 是一个风险计算模块
+
+```python
+R=QA.QA_Risk(ACCOUNT,benchmark_code='000300',benchmark_type=MARKET_TYPE.INDEX_CN)
+
+#< QA_RISK ANALYSIS ACCOUNT-Acc_50wle3cY >
+
+R()
+# R() 是一个datafram形式的表达结果
+    account_cookie	annualize_return	max_dropback	portfolio_cookie	profit	time_gap	user_cookie	    volatility
+0	Acc_50wle3cY	-0.000458	        0.00012     	Portfolio_oAkrKvj9	-0.000011	6	    USER_l1CeBXog	64.696986
+
+R.message
+
+{'account_cookie': 'Acc_50wle3cY',
+ 'annualize_return': -0.0004582372482384578,
+ 'max_dropback': 0.00012000168002352033,
+ 'portfolio_cookie': 'Portfolio_oAkrKvj9',
+ 'profit': -1.1000154002127616e-05,
+ 'time_gap': 6,
+ 'user_cookie': 'USER_l1CeBXog',
+ 'volatility': 64.69698601944299}
+
+```
+
+
+## 组合视角 PORTFOLIO VIEW
+
+QA_PortfolioView 是一个组合视角,只要输入account列表,就可以生成一个视角
+
+```python
+
+# 如果从数据库中获取:
+accounts=[QA.QA_Account().from_message(x) for x in QA.QA_fetch_account()]
+# 中间可以对时间等进行筛选以后再放进来 或者对于持仓股票进行筛选
+
+accounts=[QA_Account1,QA_Account2,....]
+PV=QA.QA_PortfolioView(accounts)
+
+```
+PV可以直接被加载到QA_Risk模块中
+
+```python
+risk_pv=QA.QA_Risk(PV)
+
+#calc result
+
+risk.message
+```
+
