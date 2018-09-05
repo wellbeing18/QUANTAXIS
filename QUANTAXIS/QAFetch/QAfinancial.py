@@ -30,6 +30,8 @@ from pytdx.reader.history_financial_reader import HistoryFinancialReader
 from pytdx.crawler.history_financial_crawler import HistoryFinancialCrawler
 from QUANTAXIS.QAUtil.QAFile import QA_util_file_md5
 from QUANTAXIS.QASetting.QALocalize import qa_path, download_path
+from QUANTAXIS.QAUtil import QA_util_date_stamp
+import datetime
 """
 参见PYTDX 1.65
 """
@@ -125,6 +127,36 @@ def parse_all():
     filename = os.listdir(download_path)
 
     return parse_filelist(filename)
+
+# bwang: report path
+sina_fin_path = "C:/Users/ben_msi/abu/data/download/sina/financial/"
+balance_path = sina_fin_path + 'balance/'
+profit_path = sina_fin_path + 'profit/'
+cashflow_path = sina_fin_path + 'cashflow/'
+report_path = {'balance': balance_path,
+               'profit': profit_path,
+               'cashflow': cashflow_path}
+
+def QA_fecth_local_financial_report_cn(code, report_type):
+    report_file = report_path[report_type] + code + '.csv'
+    df = pd.read_csv(report_file, sep='\t',encoding='GB2312', header=None)
+    if len(df) < 1:
+        print("{} report of stock {} cannot be loaded".format(report_type, code))
+        return None
+    df = df.set_index(0).T # transpose dataframe, make rows into columns
+    df = df[df['报表日期'].str.contains('19700101') == False] # remove rows with 19700101 and last all NA row
+    df = df[::-1] # reverse the df
+    df['报表日期'] = df['报表日期'].apply(lambda x: '{}-{}-{}'.format(x[:4], x[4:6], x[6:]))
+    df['code'] = code
+    t = os.path.getmtime(report_file)
+    df['更新日期'] = str(datetime.datetime.fromtimestamp(t))[:10]
+    df['hash_md5'] = QA_util_file_md5(report_file)
+    #df['date_stamp'] = df['报表日期'].apply(lambda x: QA_util_date_stamp(x))
+    # create index using 报表日期 after change it to datetime, useful for later index and compare date
+    df['报表日期'] = pd.to_datetime(df['报表日期'])
+    df = df.set_index('报表日期', drop=False)
+    df['报表日期'] = df['报表日期'].apply(lambda x: str(x)[0:10])
+    return df
 
 
 financialmeans = ['基本每股收益',

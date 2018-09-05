@@ -45,6 +45,9 @@ from QUANTAXIS.QAUtil import (DATABASE, QA_util_get_next_day,
                               QA_util_get_real_date, QA_util_log_info,
                               QA_util_to_json_from_pandas, trade_date_sse)
 
+import concurrent
+from concurrent.futures import ThreadPoolExecutor
+
 # ip=select_best_ip()
 
 
@@ -429,7 +432,7 @@ def QA_SU_save_index_day(client=DATABASE, ui_log = None, ui_progress = None):
             if ref_.count() > 0:
                 start_time = ref_[ref_.count() - 1]['date']
 
-                QA_util_log_info('##JOB04 Now Saving INDEX_DAY==== \n Trying updating {} from {} to {}'.format
+                QA_util_log_info('Now Saving INDEX_DAY==== \n Trying updating {} from {} to {}'.format
                                  (code, start_time, end_time), ui_log= ui_log)
 
                 if start_time != end_time:
@@ -439,14 +442,85 @@ def QA_SU_save_index_day(client=DATABASE, ui_log = None, ui_progress = None):
             else:
                 try:
                     start_time = '1990-01-01'
-                    QA_util_log_info('##JOB04 Now Saving INDEX_DAY==== \n Trying updating {} from {} to {}'.format
+                    QA_util_log_info('Now Saving INDEX_DAY==== \n Trying updating {} from {} to {}'.format
                                      (code, start_time, end_time), ui_log=ui_log)
                     coll.insert_many(
                         QA_util_to_json_from_pandas(
                             QA_fetch_get_index_day(str(code), start_time, end_time)))
                 except:
                     start_time = '2009-01-01'
-                    QA_util_log_info('##JOB04 Now Saving INDEX_DAY==== \n Trying updating {} from {} to {}'.format
+                    QA_util_log_info('Now Saving INDEX_DAY==== \n Trying updating {} from {} to {}'.format
+                                     (code, start_time, end_time), ui_log=ui_log)
+                    coll.insert_many(
+                        QA_util_to_json_from_pandas(
+                            QA_fetch_get_index_day(str(code), start_time, end_time)))
+        except Exception as e:
+            QA_util_log_info(e, ui_log=ui_log)
+            err.append(str(code))
+            QA_util_log_info(err, ui_log=ui_log)
+    
+    # bwang: multi-thread
+    executor = ThreadPoolExecutor(max_workers=10)
+    res = {executor.submit(__saving_work,  __index_list.index[i_], coll) for i_ in range(len(__index_list.index))}
+
+    count = 0
+    for i_ in concurrent.futures.as_completed(res):
+        #__saving_work('000001')
+        QA_util_log_info('The {} of Total {}'.format(count, len(__index_list)), ui_log=ui_log)
+
+        strLogProgress = 'DOWNLOAD PROGRESS {} '.format(str(float(count/ len(__index_list) * 100))[0:4] + '%')
+        intLogProgress = int(float(count / len(__index_list) * 10000.0 ))
+        QA_util_log_info(strLogProgress, ui_log= ui_log, ui_progress = ui_progress, ui_progress_int_value= intLogProgress)
+        #__saving_work(__index_list.index[i_][0], coll)
+        count = count + 1
+    if len(err) < 1:
+        QA_util_log_info('SUCCESS', ui_log= ui_log)
+    else:
+        QA_util_log_info(' ERROR CODE \n ', ui_log= ui_log)
+        QA_util_log_info(err, ui_log= ui_log)
+
+def QA_SU_save_block_index_day(client=DATABASE, ui_log = None, ui_progress = None):
+    """save index_day
+
+    Keyword Arguments:
+        client {[type]} -- [description] (default: {DATABASE})
+    """
+
+    #__index_list = QA_fetch_get_stock_list('index')
+    import pickle
+    block_index_list = pickle.load(open("C:/Users/ben_msi/abu/data/download/tdx/block_idx_code_list.pkl", 'rb'))
+    # new collection block_index_day
+    coll = client.block_index_day
+    coll.create_index([('code', pymongo.ASCENDING),
+                       ('date_stamp', pymongo.ASCENDING)])
+    err = []
+
+    def __saving_work(code, coll):
+
+        try:
+            ref_ = coll.find({'code': str(code)[0:6]})
+            end_time = str(now_time())[0:10]
+            if ref_.count() > 0:
+                start_time = ref_[ref_.count() - 1]['date']
+
+                QA_util_log_info('Now Saving INDEX_DAY==== \n Trying updating {} from {} to {}'.format
+                                 (code, start_time, end_time), ui_log= ui_log)
+
+                if start_time != end_time:
+                    coll.insert_many(
+                        QA_util_to_json_from_pandas(
+                            QA_fetch_get_index_day(str(code), QA_util_get_next_day(start_time), end_time)))
+            else:
+                try:
+                    start_time = '1990-01-01'
+                    QA_util_log_info('Now Saving INDEX_DAY==== \n Trying updating {} from {} to {}'.format
+                                     (code, start_time, end_time), ui_log=ui_log)
+                    coll.insert_many(
+                        QA_util_to_json_from_pandas(
+                            QA_fetch_get_index_day(str(code), start_time, end_time)))
+                except:
+                    start_time = '2009-01-01'
+                    QA_util_log_info('Now Saving INDEX_DAY==== \n Trying updating {} from {} to {}'.format
                                      (code, start_time, end_time), ui_log=ui_log)
                     coll.insert_many(
                         QA_util_to_json_from_pandas(
@@ -456,20 +530,25 @@ def QA_SU_save_index_day(client=DATABASE, ui_log = None, ui_progress = None):
             err.append(str(code))
             QA_util_log_info(err, ui_log=ui_log)
 
-    for i_ in range(len(__index_list)):
-        #__saving_work('000001')
-        QA_util_log_info('The {} of Total {}'.format(i_, len(__index_list)), ui_log=ui_log)
+    # bwang: multi-thread
+    executor = ThreadPoolExecutor(max_workers=10)
+    res = {executor.submit(__saving_work,  block_index_list[i_], coll) for i_ in range(len(block_index_list))}
 
-        strLogProgress = 'DOWNLOAD PROGRESS {} '.format(str(float(i_ / len(__index_list) * 100))[0:4] + '%')
-        intLogProgress = int(float(i_ / len(__index_list) * 10000.0 ))
+    count = 0
+    for i_ in concurrent.futures.as_completed(res):
+        #__saving_work('000001')
+        QA_util_log_info('The {} of Total {}'.format(count, len(block_index_list)), ui_log=ui_log)
+
+        strLogProgress = 'DOWNLOAD PROGRESS {} '.format(str(float(count / len(block_index_list) * 100))[0:4] + '%')
+        intLogProgress = int(float(count / len(block_index_list) * 10000.0 ))
         QA_util_log_info(strLogProgress, ui_log= ui_log, ui_progress = ui_progress, ui_progress_int_value= intLogProgress)
-        __saving_work(__index_list.index[i_][0], coll)
+        #__saving_work(block_index_list[i_], coll)
+        count = count + 1
     if len(err) < 1:
         QA_util_log_info('SUCCESS', ui_log= ui_log)
     else:
         QA_util_log_info(' ERROR CODE \n ', ui_log= ui_log)
         QA_util_log_info(err, ui_log= ui_log)
-
 
 def QA_SU_save_index_min(client=DATABASE, ui_log= None, ui_progress = None):
     """save index_min

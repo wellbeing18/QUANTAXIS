@@ -71,8 +71,8 @@ from QUANTAXIS.QAFetch import (QA_fetch_get_stock_day, QA_fetch_get_trade_date, 
                                QA_fetch_get_exchangerate_list, QA_fetch_get_exchangerate_day, QA_fetch_get_exchangerate_min,
                                QA_fetch_get_globalfuture_list, QA_fetch_get_globalfuture_day, QA_fetch_get_globalfuture_min)
 from QUANTAXIS.QAFetch.QAQuery import (QA_fetch_trade_date, QA_fetch_account, QA_fetch_financial_report,
-                                       QA_fetch_stock_day, QA_fetch_stock_min,
-                                       QA_fetch_index_day, QA_fetch_index_min,
+                                       QA_fetch_stock_day, QA_fetch_stock_min,QA_fetch_stock_day_ts,
+                                       QA_fetch_index_day, QA_fetch_index_min,QA_fetch_block_index_day,
                                        QA_fetch_future_min, QA_fetch_future_day,
                                        QA_fetch_future_tick, QA_fetch_stock_list, QA_fetch_stock_full, QA_fetch_stock_xdxr,
                                        QA_fetch_backtest_info, QA_fetch_backtest_history, QA_fetch_stock_block, QA_fetch_stock_info,
@@ -84,7 +84,7 @@ from QUANTAXIS.QAFetch.QAQuery_Advance import *
 # save
 from QUANTAXIS.QASU.main import (QA_SU_save_stock_list, QA_SU_save_stock_day, QA_SU_save_index_day, QA_SU_save_index_min, QA_SU_save_stock_info_tushare,
                                  QA_SU_save_stock_min, QA_SU_save_stock_xdxr, QA_SU_save_stock_info, QA_SU_save_stock_min_5,
-                                 QA_SU_save_stock_block, QA_SU_save_etf_day, QA_SU_save_etf_min, QA_SU_save_financialfiles)
+                                 QA_SU_save_stock_block, QA_SU_save_etf_day, QA_SU_save_etf_min, QA_SU_save_financialfiles, QA_SU_save_block_index_day)
 
 # from QUANTAXIS.QASU.save_backtest import (
 #     QA_SU_save_account_message, QA_SU_save_backtest_message, QA_SU_save_account_to_csv)

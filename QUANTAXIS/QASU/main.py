@@ -125,6 +125,19 @@ def QA_SU_save_index_day(engine, client=DATABASE):
     engine = select_save_engine(engine)
     engine.QA_SU_save_index_day(client=client)
 
+def QA_SU_save_block_index_day(engine, client=DATABASE):
+    """save block_index_day
+
+    Arguments:
+        engine {[type]} -- [description]
+
+    Keyword Arguments:
+        client {[type]} -- [description] (default: {DATABASE})
+    """
+
+    engine = select_save_engine(engine)
+    engine.QA_SU_save_block_index_day(client=client)
+
 
 def QA_SU_save_index_min(engine, client=DATABASE):
     """save index_min
@@ -259,3 +272,6 @@ def QA_SU_crawl_eastmoney(action="zjlx", stockCode=None):
 
 def QA_SU_save_financialfiles():
     return save_financialfiles.QA_SU_save_financial_files()
+
+def QA_SU_save_stock_financial():
+    return save_financialfiles.QA_SU_save_stock_financial()

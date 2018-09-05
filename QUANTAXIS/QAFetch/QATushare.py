@@ -46,9 +46,33 @@ def QA_fetch_get_stock_day(name, start='', end='', if_fq='01', type_='pd'):
         if_fq = 'qfq'
 
     data = QATs.get_k_data(str(name), start, end, ktype='D', autype=if_fq, retry_count=200, pause=0.005).sort_index()
-
+    
+    if len(data) < 1:
+        return None
+        
     data['date_stamp'] = data['date'].apply(lambda x: QA_util_date_stamp(x))
     data['fqtype'] = if_fq
+    if type_ in ['json']:
+        data_json = QA_util_to_json_from_pandas(data)
+        return data_json
+    elif type_ in ['pd', 'pandas', 'p']:
+        data['date'] = pd.to_datetime(data['date'])
+        data = data.set_index('date', drop=False)
+        data['date'] = data['date'].apply(lambda x: str(x)[0:10])
+        return data
+
+def QA_fetch_get_index_day(name, start='', end='', type_='pd'):
+    if (len(name) != 6):
+        name = str(name)[0:6]
+
+    data = QATs.get_k_data(str(name), start, end, index=True, ktype='D', retry_count=200, pause=0.005).sort_index()
+
+    if len(data) < 1:
+        return None
+
+    data['date_stamp'] = data['date'].apply(lambda x: QA_util_date_stamp(x))
+    data['code'] = data['code'].apply(lambda x: x[2:]) # remove sh from index code sh000001
+    
     if type_ in ['json']:
         data_json = QA_util_to_json_from_pandas(data)
         return data_json

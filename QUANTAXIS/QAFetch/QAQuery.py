@@ -85,6 +85,89 @@ def QA_fetch_stock_day(code, start, end, format='numpy', frequence='day', collec
         QA_util_log_info(
             'QA Error QA_fetch_stock_day data parameter start=%s end=%s is not right' % (start, end))
 
+def QA_fetch_stock_day_ts(code, start, end, format='pd', frequence='day', collections=DATABASE.stock_day_ts):
+    '获取股票日线'
+    start = str(start)[0:10]
+    end = str(end)[0:10]
+    #code= [code] if isinstance(code,str) else code
+
+    # code checking
+    code = QA_util_code_tolist(code)
+
+    if QA_util_date_valid(end):
+
+        __data = []
+        cursor = collections.find({
+            'code': {'$in': code}, "date_stamp": {
+                "$lte": QA_util_date_stamp(end),
+                "$gte": QA_util_date_stamp(start)}})
+        #res=[QA_util_dict_remove_key(data, '_id') for data in cursor]
+
+        res = pd.DataFrame([item for item in cursor])
+        try:
+            res = res.drop('_id', axis=1).assign(volume=res.volume).query('volume>1').assign(date=pd.to_datetime(
+                res.date)).drop_duplicates((['date', 'code'])).set_index('date', drop=False)
+            res = res.ix[:, ['code', 'open', 'high', 'low',
+                             'close', 'volume', 'date']]
+        except:
+            res = None
+        if format in ['P', 'p', 'pandas', 'pd']:
+            return res
+        elif format in ['json', 'dict']:
+            return QA_util_to_json_from_pandas(res)
+        # 多种数据格式
+        elif format in ['n', 'N', 'numpy']:
+            return numpy.asarray(res)
+        elif format in ['list', 'l', 'L']:
+            return numpy.asarray(res).tolist()
+        else:
+            print("QA Error QA_fetch_stock_day_ts format parameter %s is none of  \"P, p, pandas, pd , json, dict , n, N, numpy, list, l, L, !\" " % format)
+            return None
+    else:
+        QA_util_log_info(
+            'QA Error QA_fetch_stock_day_ts data parameter start=%s end=%s is not right' % (start, end))
+
+def QA_fetch_index_day_ts(code, start, end, format='pd', frequence='day', collections=DATABASE.index_day_ts):
+    '获取股票日线'
+    start = str(start)[0:10]
+    end = str(end)[0:10]
+    #code= [code] if isinstance(code,str) else code
+
+    # code checking
+    code = QA_util_code_tolist(code)
+
+    if QA_util_date_valid(end):
+
+        __data = []
+        cursor = collections.find({
+            'code': {'$in': code}, "date_stamp": {
+                "$lte": QA_util_date_stamp(end),
+                "$gte": QA_util_date_stamp(start)}})
+        #res=[QA_util_dict_remove_key(data, '_id') for data in cursor]
+
+        res = pd.DataFrame([item for item in cursor])
+        try:
+            res = res.drop('_id', axis=1).assign(volume=res.volume).query('volume>1').assign(date=pd.to_datetime(
+                res.date)).drop_duplicates((['date', 'code'])).set_index('date', drop=False)
+            res = res.ix[:, ['code', 'open', 'high', 'low',
+                             'close', 'volume', 'date']]
+        except:
+            res = None
+        if format in ['P', 'p', 'pandas', 'pd']:
+            return res
+        elif format in ['json', 'dict']:
+            return QA_util_to_json_from_pandas(res)
+        # 多种数据格式
+        elif format in ['n', 'N', 'numpy']:
+            return numpy.asarray(res)
+        elif format in ['list', 'l', 'L']:
+            return numpy.asarray(res).tolist()
+        else:
+            print("QA Error QA_fetch_index_day_ts format parameter %s is none of  \"P, p, pandas, pd , json, dict , n, N, numpy, list, l, L, !\" " % format)
+            return None
+    else:
+        QA_util_log_info(
+            'QA Error QA_fetch_index_day_ts data parameter start=%s end=%s is not right' % (start, end))
 
 def QA_fetch_stock_min(code, start, end, format='numpy', frequence='1min', collections=DATABASE.stock_min):
     '获取股票分钟线'
@@ -266,6 +349,41 @@ def QA_fetch_index_day(code, start, end, format='numpy', collections=DATABASE.in
     else:
         QA_util_log_info('QA something wrong with date')
 
+def QA_fetch_block_index_day(code, start, end, format='numpy', collections=DATABASE.block_index_day):
+    '获取指数日线'
+    start = str(start)[0:10]
+    end = str(end)[0:10]
+    code = QA_util_code_tolist(code)
+    if QA_util_date_valid(end) == True:
+
+        __data = []
+        cursor = collections.find({
+            'code': {'$in': code}, "date_stamp": {
+                "$lte": QA_util_date_stamp(end),
+                "$gte": QA_util_date_stamp(start)}})
+        if format in ['dict', 'json']:
+            return [data for data in cursor]
+        for item in cursor:
+
+            __data.append([str(item['code']), float(item['open']), float(item['high']), float(
+                item['low']), float(item['close']), float(item['vol']), item['date']])
+
+        # 多种数据格式
+        if format in ['n', 'N', 'numpy']:
+            __data = numpy.asarray(__data)
+        elif format in ['list', 'l', 'L']:
+            __data = __data
+        elif format in ['P', 'p', 'pandas', 'pd']:
+            __data = DataFrame(
+                __data, columns=['code', 'open', 'high', 'low', 'close', 'volume', 'date'])
+            __data['date'] = pd.to_datetime(__data['date'])
+            __data = __data.set_index('date', drop=False)
+        else:
+            print("QA Error QA_fetch_block_index_day format parameter %s is none of  \"P, p, pandas, pd , n, N, numpy !\" " % format)
+        return __data
+    else:
+        QA_util_log_info('QA something wrong with date')
+
 
 def QA_fetch_index_min(
         code,
@@ -442,7 +560,7 @@ def QA_fetch_lhb(date, db=DATABASE):
         raise e
 
 
-def QA_fetch_financial_report(code, report_date, ltype='EN', db=DATABASE):
+def QA_fetch_financial_report(code, report_date, ltype='CN', db=DATABASE):
     """获取专业财务报表
 
     Arguments:
@@ -470,11 +588,12 @@ def QA_fetch_financial_report(code, report_date, ltype='EN', db=DATABASE):
         report_date = [QA_util_date_str2int(item) for item in report_date]
 
     collection = db.financial
-    CH_columns = [item[3:] for item in list(financial_dict.keys())]
+    CH_columns = [item for item in sorted(list(financial_dict.keys()))]
     CH_columns.extend(['277', '278', '279', '280', '281', '282', '_id', 'code',
                        'report_date'])
     CH_columns = pd.Index(CH_columns)
-    EN_columns = list(financial_dict.values())
+    #EN_columns = list(financial_dict.values())
+    EN_columns = [financial_dict[key] for key in sorted(list(financial_dict.keys()))]
     EN_columns.extend(['277', '278', '279', '280', '281', '282', '_id', 'code',
                        'report_date'])
     EN_columns = pd.Index(EN_columns)
@@ -503,7 +622,8 @@ def QA_fetch_financial_report(code, report_date, ltype='EN', db=DATABASE):
             else:
                 res_pd.report_date=pd.to_datetime(res_pd.report_date)
             
-            return res_pd.replace(-4.039810335e+34, numpy.nan).set_index(['report_date', 'code'], drop=False)
+            #return res_pd.replace(-4.039810335e+34, numpy.nan).set_index(['report_date', 'code'], drop=False)
+            return res_pd.replace(-4.039810335e+34, numpy.nan).set_index(['report_date'], drop=False)
         else:
             return None
     except Exception as e:

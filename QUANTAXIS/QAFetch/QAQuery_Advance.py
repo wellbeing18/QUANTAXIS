@@ -33,8 +33,11 @@ from QUANTAXIS.QAData import (QA_DataStruct_Index_day, QA_DataStruct_Index_min,
                               QA_DataStruct_Stock_day, QA_DataStruct_Stock_min,
                               QA_DataStruct_Stock_transaction)
 from QUANTAXIS.QAFetch.QAQuery import (QA_fetch_index_day,
+                                       QA_fetch_block_index_day,
                                        QA_fetch_index_min,
                                        QA_fetch_stock_day,
+                                       QA_fetch_stock_day_ts,
+                                       QA_fetch_index_day_ts,
                                        QA_fetch_stock_full,
                                        QA_fetch_stock_min,
                                        QA_fetch_financial_report
@@ -110,6 +113,79 @@ def QA_fetch_stock_day_adv(
         #     return None
         return QA_DataStruct_Stock_day(res_reset_index)
 
+def QA_fetch_stock_day_ts_adv(
+        code,
+        start='all', end=None,
+        if_drop_index=False,
+        # 🛠 todo collections 参数没有用到， 且数据库是固定的， 这个变量后期去掉
+        collections=DATABASE.stock_day_ts):
+    '''
+
+    :param code:  股票代码
+    :param start: 开始日期
+    :param end:   结束日期
+    :param if_drop_index:
+    :param collections: 默认数据库
+    :return: 如果股票代码不存 或者开始结束日期不存在 在返回 None ，合法返回 QA_DataStruct_Stock_day 数据
+    '''
+    '获取股票日线'
+    end = start if end is None else end
+    start = str(start)[0:10]
+    end = str(end)[0:10]
+
+    if start == 'all':
+        start = '1990-01-01'
+        end = str(datetime.date.today())
+
+    res = QA_fetch_stock_day_ts(code, start, end, format='pd')
+    if res is None:
+        # 🛠 todo 报告是代码不合法，还是日期不合法
+        print("QA Error QA_fetch_stock_day_adv parameter code=%s , start=%s, end=%s call QA_fetch_stock_day return None" % (
+            code, start, end))
+        return None
+    else:
+        res_reset_index = res.set_index(['date'], drop=if_drop_index)
+        # if res_reset_index is None:
+        #     print("QA Error QA_fetch_stock_day_adv set index 'datetime, code' return None")
+        #     return None
+        return res_reset_index
+
+def QA_fetch_index_day_ts_adv(
+        code,
+        start='all', end=None,
+        if_drop_index=False,
+        # 🛠 todo collections 参数没有用到， 且数据库是固定的， 这个变量后期去掉
+        collections=DATABASE.index_day_ts):
+    '''
+
+    :param code:  股票代码
+    :param start: 开始日期
+    :param end:   结束日期
+    :param if_drop_index:
+    :param collections: 默认数据库
+    :return: 如果股票代码不存 或者开始结束日期不存在 在返回 None ，合法返回 QA_DataStruct_Stock_day 数据
+    '''
+    '获取股票日线'
+    end = start if end is None else end
+    start = str(start)[0:10]
+    end = str(end)[0:10]
+
+    if start == 'all':
+        start = '1990-01-01'
+        end = str(datetime.date.today())
+
+    res = QA_fetch_index_day_ts(code, start, end, format='pd')
+    if res is None:
+        # 🛠 todo 报告是代码不合法，还是日期不合法
+        print("QA Error QA_fetch_stock_day_adv parameter code=%s , start=%s, end=%s call QA_fetch_stock_day return None" % (
+            code, start, end))
+        return None
+    else:
+        res_reset_index = res.set_index(['date'], drop=if_drop_index)
+        # if res_reset_index is None:
+        #     print("QA Error QA_fetch_stock_day_adv set index 'datetime, code' return None")
+        #     return None
+        return res_reset_index
 
 def QA_fetch_stock_min_adv(
         code,
@@ -193,8 +269,8 @@ def QA_fetch_stock_day_full_adv(date):
 
 def QA_fetch_index_day_adv(
         code,
-        start, end=None,
-        if_drop_index=True,
+        start='all', end=None,
+        if_drop_index=False,
         # 🛠 todo collections 参数没有用到， 且数据库是固定的， 这个变量后期去掉
         collections=DATABASE.index_day):
     '''
@@ -210,6 +286,10 @@ def QA_fetch_index_day_adv(
     start = str(start)[0:10]
     end = str(end)[0:10]
 
+    if start == 'all':
+        start = '1990-01-01'
+        end = str(datetime.date.today())
+
     # 🛠 todo 报告错误 如果开始时间 在 结束时间之后
     # 🛠 todo 如果相等
 
@@ -218,12 +298,51 @@ def QA_fetch_index_day_adv(
         print("QA Error QA_fetch_index_day_adv parameter code=%s start=%s end=%s call QA_fetch_index_day return None" % (
             code, start, end))
     else:
-        res_set_index = res.set_index(['date', 'code'])
+        res_set_index = res.set_index(['date'], drop=if_drop_index)
         # if res_set_index is None:
         #     print("QA Error QA_fetch_index_day_adv set index 'date, code' return None")
         #     return None
-        return QA_DataStruct_Index_day(res_set_index)
+        #return QA_DataStruct_Index_day(res_set_index)
+        return res_set_index
 
+
+def QA_fetch_block_index_day_adv(
+        code,
+        start='all', end=None,
+        if_drop_index=False,
+        # 🛠 todo collections 参数没有用到， 且数据库是固定的， 这个变量后期去掉
+        collections=DATABASE.block_index_day):
+    '''
+    :param code: code:  字符串str eg 600085
+    :param start:  字符串str 开始日期 eg 2011-01-01
+    :param end:  字符串str 结束日期 eg 2011-05-01
+    :param if_drop_index: Ture False ， dataframe drop index or not
+    :param collections:  mongodb 数据库
+    :return:
+    '''
+    '获取指数日线'
+    end = start if end is None else end
+    start = str(start)[0:10]
+    end = str(end)[0:10]
+
+    if start == 'all':
+        start = '1990-01-01'
+        end = str(datetime.date.today())
+
+    # 🛠 todo 报告错误 如果开始时间 在 结束时间之后
+    # 🛠 todo 如果相等
+
+    res = QA_fetch_block_index_day(code, start, end, format='pd')
+    if res is None:
+        print("QA Error QA_fetch_block_index_day_adv parameter code=%s start=%s end=%s call QA_fetch_block_index_day return None" % (
+            code, start, end))
+    else:
+        res_set_index = res.set_index(['date'], drop=if_drop_index)
+        # if res_set_index is None:
+        #     print("QA Error QA_fetch_block_index_day_adv set index 'date, code' return None")
+        #     return None
+        #return QA_DataStruct_Index_day(res_set_index)
+        return res_set_index
 
 def QA_fetch_index_min_adv(
         code,
