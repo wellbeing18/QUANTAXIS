@@ -40,7 +40,10 @@ from QUANTAXIS.QAFetch.QAQuery import (QA_fetch_index_day,
                                        QA_fetch_index_day_ts,
                                        QA_fetch_stock_full,
                                        QA_fetch_stock_min,
-                                       QA_fetch_financial_report
+                                       QA_fetch_financial_report,
+                                       QA_fetch_stock_list,
+                                       QA_fetch_index_list,
+                                       QA_fetch_future_list
                                        )
 from QUANTAXIS.QAUtil.QADate import month_data
 from QUANTAXIS.QAUtil import (DATABASE, QA_Setting, QA_util_date_stamp,
@@ -431,11 +434,37 @@ def QA_fetch_stock_list_adv(collections=DATABASE.stock_list):
     :param collections: mongodb 数据库
     :return: DataFrame
     '''
-    stock_list_items = [item for item in collections.find()]
+    stock_list_items = QA_fetch_stock_list(collections)
     if len(stock_list_items) == 0:
         print("QA Error QA_fetch_stock_list_adv call item for item in collections.find() return 0 item, maybe the DATABASE.stock_list is empty!")
-        return
-    return pd.DataFrame(stock_list_items).drop('_id', axis=1, inplace=False)
+        return None
+    return pd.DataFrame(stock_list_items).drop('_id', axis=1, inplace=False).set_index('code',drop=False)
+
+
+def QA_fetch_index_list_adv(collections=DATABASE.index_list):
+    '''
+    '获取股票列表'
+    :param collections: mongodb 数据库
+    :return: DataFrame
+    '''
+    index_list_items = QA_fetch_index_list(collections)
+    if len(index_list_items) == 0:
+        print("QA Error QA_fetch_index_list_adv call item for item in collections.find() return 0 item, maybe the DATABASE.index_list is empty!")
+        return None
+    return pd.DataFrame(index_list_items).drop('_id', axis=1, inplace=False).set_index('code',drop=False)
+
+
+def QA_fetch_future_list_adv(collections=DATABASE.future_list):
+    '''
+    '获取股票列表'
+    :param collections: mongodb 数据库
+    :return: DataFrame
+    '''
+    future_list_items = QA_fetch_future_list()
+    if len(future_list_items) == 0:
+        print("QA Error QA_fetch_future_list_adv call item for item in collections.find() return 0 item, maybe the DATABASE.future_list is empty!")
+        return None
+    return pd.DataFrame(future_list_items).drop('_id', axis=1, inplace=False).set_index('code',drop=False)
 
 
 def QA_fetch_stock_block_adv(code=None, blockname=None, collections=DATABASE.stock_block):
@@ -450,14 +479,20 @@ def QA_fetch_stock_block_adv(code=None, blockname=None, collections=DATABASE.sto
         # 返回这个股票代码所属的板块
         data = pd.DataFrame([item for item in collections.find(
             {'code': code})]).drop(['_id'], axis=1)
+
         return QA_DataStruct_Stock_block(data.set_index(['blockname', 'code'], drop=True).drop_duplicates())
     elif blockname is not None and code is None:
+        #
+        # 🛠 todo fnished 返回 这个板块所有的股票
         # 返回该板块所属的股票
+        # print("QA Error blockname is Not none code none, return all code from its block name have not implemented yet !")
+
         items_from_collections = [item for item in collections.find(
             {'blockname': re.compile(blockname)})]
         data = pd.DataFrame(items_from_collections).drop(['_id'], axis=1)
-        # 🛠 todo 返回 这个板块所有的股票
-        print("QA Error blockname is Not none code none, return all code from its block name have not implemented yet !")
+        data_set_index = data.set_index(['blockname', 'code'], drop=True)
+        return QA_DataStruct_Stock_block(data_set_index)
+
     else:
         # 🛠 todo 返回 判断 这个股票是否和属于该板块
         data = pd.DataFrame(
@@ -479,7 +514,7 @@ def QA_fetch_stock_realtime_adv(code=None,
     if code is not None:
         # code 必须转换成list 去查询数据库
         if isinstance(code, str):
-            code = list(code)
+            code = [code]
         elif isinstance(code, list):
             pass
         else:
