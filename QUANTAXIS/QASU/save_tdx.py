@@ -514,7 +514,7 @@ def QA_SU_save_block_index_day(client=DATABASE, ui_log = None, ui_progress = Non
 
     #__index_list = QA_fetch_get_stock_list('index')
     import pickle
-    block_index_list = pickle.load(open("C:/Users/ben_msi/abu/data/download/tdx/block_idx_code_list.pkl", 'rb'))
+    block_index_list = pickle.load(open("D:/abu/data/download/tdx/block_idx_code_list.pkl", 'rb'))
     # new collection block_index_day
     coll = client.block_index_day
     coll.create_index([('code', pymongo.ASCENDING),

@@ -27,6 +27,7 @@ from QUANTAXIS.QASU import save_tdx as stdx
 from QUANTAXIS.QASU import save_tdx_file as tdx_file
 from QUANTAXIS.QASU import save_tushare as sts
 from QUANTAXIS.QASU import save_financialfiles
+from QUANTAXIS.QASU import save_indicators
 from QUANTAXIS.QAUtil import DATABASE
 
 
@@ -113,6 +114,19 @@ def QA_SU_save_stock_day(engine, client=DATABASE):
 
     engine = select_save_engine(engine)
     engine.QA_SU_save_stock_day(client=client)
+
+def QA_SU_save_stock_financial(engine, client=DATABASE):
+    """save stock_day
+
+    Arguments:
+        engine {[type]} -- [description]
+
+    Keyword Arguments:
+        client {[type]} -- [description] (default: {DATABASE})
+    """
+
+    engine = select_save_engine(engine)
+    engine.QA_SU_save_stock_financial(client=client)
 
 
 def QA_SU_save_option_day(engine, client=DATABASE):
@@ -301,5 +315,10 @@ def QA_SU_crawl_eastmoney(action="zjlx", stockCode=None):
 def QA_SU_save_financialfiles():
     return save_financialfiles.QA_SU_save_financial_files()
 
+def QA_SU_append_stock_pure_tech_indicator():
+    return save_indicators.QA_SU_append_stock_pure_tech_indicator()
+
+"""
 def QA_SU_save_stock_financial():
     return save_financialfiles.QA_SU_save_stock_financial()
+"""

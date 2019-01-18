@@ -38,7 +38,8 @@ from QUANTAXIS.QASU.main import (QA_SU_save_stock_list, QA_SU_save_stock_min, QA
                        QA_SU_save_stock_block, QA_SU_save_stock_info,QA_SU_save_stock_info_tushare,
                        QA_SU_save_stock_day, QA_SU_save_index_day, QA_SU_save_index_min,QA_SU_save_block_index_day,
                        QA_SU_save_etf_day, QA_SU_save_etf_min, QA_SU_save_option_day, QA_SU_save_financialfiles,
-                       QA_SU_save_stock_financial, QA_SU_save_index_list, QA_SU_save_future_list)
+                       QA_SU_save_stock_financial, QA_SU_save_index_list, QA_SU_save_future_list, 
+                       QA_SU_append_stock_pure_tech_indicator)
 from QUANTAXIS.QASU.save_binance import QA_SU_save_binance_symbol, QA_SU_save_binance_1hour, \
     QA_SU_save_binance_1day, QA_SU_save_binance_1min, QA_SU_save_binance
 
@@ -240,6 +241,9 @@ class CLI(cmd.Cmd):
                 QA_SU_save_stock_day('tushare')
                 QA_SU_save_index_day('tushare')
                 QA_SU_save_block_index_day('tdx')
+                QA_SU_save_stock_financial('tushare')
+                QA_SU_append_stock_pure_tech_indicator()
+                #QA_SU_save_financialfiles()
                 #QA_SU_save_stock_financial()
             elif len(arg) == 1 and arg[0] == 'day':
                 if QA_Setting().client.quantaxis.user_list.find({'username': 'admin'}).count() == 0:

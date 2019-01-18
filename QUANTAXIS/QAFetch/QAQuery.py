@@ -107,6 +107,7 @@ def QA_fetch_stock_day_ts(code, start, end, format='pd', frequence='day', collec
 
         res = pd.DataFrame([item for item in cursor])
         try:
+            # drop '_id', change 'date' from str to datetime, set 'date' to index
             res = res.drop('_id', axis=1).assign(volume=res.volume).query('volume>1').assign(date=pd.to_datetime(
                 res.date)).drop_duplicates((['date', 'code'])).set_index('date', drop=False)
             res = res.ix[:, ['code', 'open', 'high', 'low',
@@ -149,6 +150,7 @@ def QA_fetch_index_day_ts(code, start, end, format='pd', frequence='day', collec
 
         res = pd.DataFrame([item for item in cursor])
         try:
+            # drop '_id', change 'date' from str to datetime, set 'date' to index
             res = res.drop('_id', axis=1).assign(volume=res.volume).query('volume>1').assign(date=pd.to_datetime(
                 res.date)).drop_duplicates((['date', 'code'])).set_index('date', drop=False)
             res = res.ix[:, ['code', 'open', 'high', 'low',
@@ -170,6 +172,260 @@ def QA_fetch_index_day_ts(code, start, end, format='pd', frequence='day', collec
     else:
         QA_util_log_info(
             'QA Error QA_fetch_index_day_ts data parameter start=%s end=%s is not right' % (start, end))
+
+def QA_fetch_fin_indicator(code, start, end, keys='all', format='pd', collections=DATABASE.df_financial_indicator):
+    start = str(start)[0:10]
+    end = str(end)[0:10]
+
+    # code checking
+    code = QA_util_code_tolist(code)
+
+    if QA_util_date_valid(end):
+        cursor = collections.find({
+            'code': {'$in': code}, "date_stamp": {
+                "$lte": QA_util_date_stamp(end),
+                "$gte": QA_util_date_stamp(start)}})
+
+        res = pd.DataFrame([item for item in cursor])
+        try:
+            # drop '_id', change 'date' from str to datetime, set 'date' to index
+            res = res.drop('_id', axis=1).assign(date=pd.to_datetime(
+                    res.date)).drop_duplicates((['date', 'code'])).set_index('date', drop=False)
+            if keys != 'all':
+                res = res.ix[:, keys]
+        except:
+            res = None
+        
+        if format in ['P', 'p', 'pandas', 'pd']:
+            return res
+        elif format in ['json', 'dict']:
+            return QA_util_to_json_from_pandas(res)
+        # 多种数据格式
+        elif format in ['n', 'N', 'numpy']:
+            return numpy.asarray(res)
+        elif format in ['list', 'l', 'L']:
+            return numpy.asarray(res).tolist()
+        else:
+            print("QA Error QA_fetch_fin_indicator format parameter %s is none of  \"P, p, pandas, pd , json, dict , n, N, numpy, list, l, L, !\" " % format)
+            return None
+    else:
+        QA_util_log_info(
+            'QA Error QA_fetch_fin_indicator data parameter start=%s end=%s is not right' % (start, end))
+
+def QA_fetch_tech_indicator(code, start, end, keys='all', format='pd', collections=DATABASE.df_tech_indicator):
+    """
+    return: from start to end, doesn't exclude vol==0 dates in between, those date are continuous
+            and aligned with sh index already
+    """
+    start = str(start)[0:10]
+    end = str(end)[0:10]
+
+    # code checking
+    code = QA_util_code_tolist(code)
+
+    if QA_util_date_valid(end):
+        cursor = collections.find({
+            'code': {'$in': code}, "date_stamp": {
+                "$lte": QA_util_date_stamp(end),
+                "$gte": QA_util_date_stamp(start)}})
+
+        res = pd.DataFrame([item for item in cursor])
+        try:
+            # drop '_id', change 'date' from str to datetime, set 'date' to index
+            res = res.drop('_id', axis=1).assign(date=pd.to_datetime(
+                    res.date)).drop_duplicates((['date', 'code'])).set_index('date', drop=False)
+            if keys != 'all':
+                if isinstance(keys, str):
+                    res = res.ix[:, [keys]]
+                elif isinstance(keys, list):
+                    res = res.ix[:, keys]
+        except:
+            res = None
+        
+        if format in ['P', 'p', 'pandas', 'pd']:
+            return res
+        elif format in ['json', 'dict']:
+            return QA_util_to_json_from_pandas(res)
+        # 多种数据格式
+        elif format in ['n', 'N', 'numpy']:
+            return numpy.asarray(res)
+        elif format in ['list', 'l', 'L']:
+            return numpy.asarray(res).tolist()
+        else:
+            print("QA Error QA_fetch_tech_indicator format parameter %s is none of  \"P, p, pandas, pd , json, dict , n, N, numpy, list, l, L, !\" " % format)
+            return None
+    else:
+        QA_util_log_info(
+            'QA Error QA_fetch_tech_indicator data parameter start=%s end=%s is not right' % (start, end))
+
+def QA_fetch_stock_pure_tech_indicator(code, start, end, vol='non-zero', keys='all', format='pd', collections=DATABASE.stock_tech_indicator_3):
+    """
+    return: from start to end, doesn't exclude vol==0 dates in between, those date are continuous
+            and aligned with sh index already
+    """
+    start = str(start)[0:10]
+    end = str(end)[0:10]
+
+    # code checking
+    code = QA_util_code_tolist(code)
+
+    if QA_util_date_valid(end):
+        if vol == 'non-zero':
+            cursor = collections.find({
+                'code': {'$in': code}, "date_stamp": {
+                    "$lte": QA_util_date_stamp(end),
+                    "$gte": QA_util_date_stamp(start)},
+                    'volume': {"$gt": 0}})
+        else:
+            cursor = collections.find({
+                'code': {'$in': code}, "date_stamp": {
+                    "$lte": QA_util_date_stamp(end),
+                    "$gte": QA_util_date_stamp(start)}})
+
+        res = pd.DataFrame([item for item in cursor])
+        try:
+            # drop '_id', change 'date' from str to datetime, set 'date' to index
+            res = res.drop('_id', axis=1).assign(date=pd.to_datetime(
+                    res.date)).drop_duplicates((['date', 'code'])).set_index('date', drop=False)
+            if keys != 'all':
+                if isinstance(keys, str):
+                    res = res.ix[:, [keys]]
+                elif isinstance(keys, list):
+                    res = res.ix[:, keys]
+        except:
+            res = None
+        
+        if format in ['P', 'p', 'pandas', 'pd']:
+            return res
+        elif format in ['json', 'dict']:
+            return QA_util_to_json_from_pandas(res)
+        # 多种数据格式
+        elif format in ['n', 'N', 'numpy']:
+            return numpy.asarray(res)
+        elif format in ['list', 'l', 'L']:
+            return numpy.asarray(res).tolist()
+        else:
+            print("QA Error QA_fetch_tech_indicator format parameter %s is none of  \"P, p, pandas, pd , json, dict , n, N, numpy, list, l, L, !\" " % format)
+            return None
+    else:
+        QA_util_log_info(
+            'QA Error QA_fetch_tech_indicator data parameter start=%s end=%s is not right' % (start, end))
+
+def convert_fin_code(stock_code):
+    if stock_code[:2] in ['60']:
+        postfix = '.SH'
+    elif stock_code[:3] in ['000']:
+        postfix = '.SZ'
+    elif stock_code[:3] in ['002']:
+        postfix = '.SZ'
+    elif stock_code[:3] in ['300']:
+        postfix = '.SZ'
+    else:
+        print("error with converting fin code for {}".format(stock_code))
+    return str(stock_code) + postfix
+
+def QA_fetch_stock_fin_indicator_ts(code, start, end, keys='all', format='pd', collections=DATABASE.stock_financial_ts):
+
+    start = str(start)[0:10]
+    end = str(end)[0:10]
+
+    # code checking
+    #code = QA_util_code_tolist(code)
+
+    if QA_util_date_valid(end):
+
+        code = convert_fin_code(code)
+
+        cursor = collections.find({
+                'ts_code': str(code),
+                "date_stamp": {
+                "$lte": QA_util_date_stamp(end),
+                "$gte": QA_util_date_stamp(start)}})
+
+        res = pd.DataFrame([item for item in cursor])
+        try:
+            # drop '_id', change 'date' from str to datetime, set 'date' to index
+            res = res.drop('_id', axis=1).assign(date=pd.to_datetime(
+                    res.date)).set_index('date', drop=False)
+
+        except:
+            res = None
+        
+        if format in ['P', 'p', 'pandas', 'pd']:
+            return res
+        elif format in ['json', 'dict']:
+            return QA_util_to_json_from_pandas(res)
+        # 多种数据格式
+        elif format in ['n', 'N', 'numpy']:
+            return numpy.asarray(res)
+        elif format in ['list', 'l', 'L']:
+            return numpy.asarray(res).tolist()
+        else:
+            print("QA Error QA_fetch_stock_fin_indicator_ts format parameter %s is none of  \"P, p, pandas, pd , json, dict , n, N, numpy, list, l, L, !\" " % format)
+            return None
+    else:
+        QA_util_log_info(
+            'QA Error QA_fetch_stock_fin_indicator_ts data parameter start=%s end=%s is not right' % (start, end))
+
+
+def QA_fetch_tech_indicator_normalized(code, start, end, keys='all', format='pd', collections=DATABASE.df_tech_indicator_normalized):
+    """
+    keys: 'all' or ['indicator1', indicator2', ....]
+    return: from start to end, doesn't exclude vol==0 dates in between, those date are continuous
+            and aligned with sh index already
+    """
+    start = str(start)[0:10]
+    end = str(end)[0:10]
+
+    if keys == 'all':
+        keys = [ 'OCF_G_q', 'OCF_cal_G_q', 'OCF_netprofit_r_q', 'PB', 'PE', 'PEG', 'PEG_cut',
+       'PE_cut', 'PNCF', 'POCF', 'PS', 'ROA_q', 'ROE_G_q', 'ROE_q', 'RSI_20',
+       'STD_12m', 'STD_1m', 'STD_3m', 'STD_6m', 'assetturnover_q',
+       'bias_turn_1m', 'bias_turn_3m', 'bias_turn_6m', 'captital_tot', 
+       'debitequityratio_q', 'exp_wgt_return_12m', 'exp_wgt_return_1m', 'exp_wgt_return_3m',
+       'exp_wgt_return_6m', 'fin_leverage_q', 'grossprofit_q', 'profit_G_q', 'profit_cut_G_q',
+       'profitmargin_q', 'return_12m', 'return_1m', 'return_3m', 'return_6m',
+       'rs', 'sales_G_q', 'turn_12m', 'turn_1m', 'turn_24m', 'turn_3m',
+       'turn_6m', 'turnover_d',  'wgt_return_12m', 'wgt_return_1m',
+       'wgt_return_3m', 'wgt_return_6m']
+
+    # code checking
+    #code = QA_util_code_tolist(code)
+
+    if QA_util_date_valid(end):
+        cursor = collections.find({
+            'key':  {'$in': keys}, "date_stamp": {
+                "$lte": QA_util_date_stamp(end),
+                "$gte": QA_util_date_stamp(start)}},
+                { str(code): 1, 'date': 1,  'key': 1})
+
+        res = pd.DataFrame([item for item in cursor])
+        try:
+            # drop '_id', change 'date' from str to datetime, set 'date' to index
+            res = res.drop('_id', axis=1).assign(date=pd.to_datetime(
+                    res.date)).set_index('date', drop=False)
+            cols = ['key', str(code)]
+            res = res.ix[:, cols]
+            # pivot on 'key' to make each column a indicator
+            res = res.pivot(columns='key', values=code)
+        except:
+            res = None
+        
+        if format in ['P', 'p', 'pandas', 'pd']:
+            return res
+        elif format in ['json', 'dict']:
+            return QA_util_to_json_from_pandas(res)
+        # 多种数据格式
+        elif format in ['n', 'N', 'numpy']:
+            return numpy.asarray(res)
+        elif format in ['list', 'l', 'L']:
+            return numpy.asarray(res).tolist()
+        else:
+            print("QA Error QA_fetch_tech_indicator format parameter %s is none of  \"P, p, pandas, pd , json, dict , n, N, numpy, list, l, L, !\" " % format)
+            return None
+    else:
+        QA_util_log_info(
+            'QA Error QA_fetch_tech_indicator data parameter start=%s end=%s is not right' % (start, end))
 
 def QA_fetch_stock_min(code, start, end, format='numpy', frequence='1min', collections=DATABASE.stock_min):
     '获取股票分钟线'
@@ -639,6 +895,47 @@ def QA_fetch_financial_report(code, report_date, ltype='CN', db=DATABASE):
     except Exception as e:
         raise e
 
+
+def QA_fetch_balance_test(code, start='all', end=None, format='pd', collections=DATABASE.fin_balance_cn):
+    if start == 'all':
+        start = '1990-01-01'
+    if end is None:
+        end = str(datetime.date.today())
+
+    start = str(start)[0:10]
+    end = str(end)[0:10]
+
+    # code checking
+    code = QA_util_code_tolist(code)
+
+    if QA_util_date_valid(end):
+        cursor = collections.find({
+            'code': {'$in': code}})
+
+        res = pd.DataFrame([item for item in cursor])
+        try:
+            # drop '_id', change 'date' from str to datetime, set 'date' to index
+            res = res.drop('_id', axis=1).assign(date=pd.to_datetime(
+                    res['报表日期'])).drop_duplicates((['date', 'code'])).set_index('date', drop=False)
+            
+        except:
+            res = None
+        
+        if format in ['P', 'p', 'pandas', 'pd']:
+            return res
+        elif format in ['json', 'dict']:
+            return QA_util_to_json_from_pandas(res)
+        # 多种数据格式
+        elif format in ['n', 'N', 'numpy']:
+            return numpy.asarray(res)
+        elif format in ['list', 'l', 'L']:
+            return numpy.asarray(res).tolist()
+        else:
+            print("QA Error QA_fetch_fin_indicator format parameter %s is none of  \"P, p, pandas, pd , json, dict , n, N, numpy, list, l, L, !\" " % format)
+            return None
+    else:
+        QA_util_log_info(
+            'QA Error QA_fetch_fin_indicator data parameter start=%s end=%s is not right' % (start, end))
 
 if __name__ == '__main__':
     print(QA_fetch_lhb('2006-07-03'))

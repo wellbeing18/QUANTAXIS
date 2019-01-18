@@ -13,6 +13,10 @@ from QUANTAXIS.QAUtil import (DATABASE, QA_util_get_next_day,
 from multiprocessing import Pool
 import tushare as ts
 
+from QUANTAXIS import QA_fetch_stock_day_ts_adv
+from QUANTAXIS.QASU.save_df_2_db import QA_SU_append_stock_tech_indicator
+import pandas as pd 
+
 def main():
     client=DATABASE
 
@@ -62,4 +66,7 @@ def main():
     pool.join()
 
 if __name__ == "__main__":
-    main()
+    #main()
+
+
+    df_sz = QA_SU_append_stock_tech_indicator('002460', start='2018-09-01')

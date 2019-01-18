@@ -33,12 +33,14 @@ import concurrent
 from concurrent.futures import ThreadPoolExecutor
 
 import pymongo
+import pandas as pd
 
 from QUANTAXIS.QAFetch.QATushare import (QA_fetch_get_stock_day,
                                          QA_fetch_get_index_day,
                                          QA_fetch_get_stock_info,
                                          QA_fetch_get_stock_list,
                                          QA_fetch_get_trade_date,
+                                         QA_fetch_get_stock_financial,
                                          QA_fetch_get_lhb)
 from QUANTAXIS.QAUtil import (QA_util_date_stamp, QA_util_log_info,
                               QA_util_time_stamp, QA_util_to_json_from_pandas,
@@ -48,7 +50,6 @@ from QUANTAXIS.QAUtil import (DATABASE, QA_util_get_next_day,
                               QA_util_get_real_date, QA_util_log_info,
                               QA_util_to_json_from_pandas, trade_date_sse)
 
-import tushare as QATs
 
 def now_time():
     return str(QA_util_get_real_date(str(datetime.date.today() - datetime.timedelta(days=1)), trade_date_sse, -1)) + \
@@ -61,6 +62,9 @@ def QA_SU_save_stock_day(client=DATABASE):
     coll_stock_day.create_index([("code", pymongo.ASCENDING), ("date_stamp", pymongo.ASCENDING)])
 
     err = []
+
+    ref = coll_stock_day.find({'code': str(df.index[0])[:6]})
+    end_date = str(now_time())[:10]
 
     def saving_work(code, coll_stock_day):
         try:
@@ -94,10 +98,10 @@ def QA_SU_save_stock_day(client=DATABASE):
 
     count = 0
     for i_ in concurrent.futures.as_completed(res):
-        QA_util_log_info('The {} of Total {}'.format(count, len(df.index)))
+        QA_util_log_info('The {} of Total {}'.format(count+1, len(df.index)))
 
-        strProgress = 'DOWNLOAD PROGRESS {} '.format(str(float(count / len(df.index) * 100))[0:4] + '%')
-        intProgress = int(count / len(df.index) * 10000.0)
+        strProgress = 'DOWNLOAD PROGRESS {} '.format(str(float((count+1) / len(df.index) * 100))[0:4] + '%')
+        intProgress = int((count+1) / len(df.index) * 10000.0)
         QA_util_log_info(strProgress, ui_progress_int_value=intProgress)
         count = count + 1
     if len(err) < 1:
@@ -121,6 +125,146 @@ def QA_SU_save_stock_day(client=DATABASE):
     """
     #saving_work('hs300')
     #saving_work('sz50')
+
+def convert_fin_code(stock_code):
+    if stock_code[:2] in ['60']:
+        postfix = '.SH'
+    elif stock_code[:3] in ['000']:
+        postfix = '.SZ'
+    elif stock_code[:3] in ['002']:
+        postfix = '.SZ'
+    elif stock_code[:3] in ['300']:
+        postfix = '.SZ'
+    else:
+        print("error with converting fin code for {}".format(stock_code))
+    return str(stock_code) + postfix
+
+def date_str_wo_dash(date_str):
+    #date_dt = pd.to_datetime(date_str)
+    return pd.to_datetime(date_str).strftime('%Y%m%d')
+
+def get_next_quarter_date(date_str):
+    """
+    # date_str here is no dash
+    if date_str[-4:] in ['0331', '0630', '0930', '1231']:
+        return date_str
+    else:"""
+
+    # bwang: this func is specific for QA_SU_save_stock_financial
+    # the incoming date_str is end_date of last quarter report
+    # need to use this date_str to get next quarter's date
+    date_dt = pd.to_datetime(date_str)
+    next_quarter_date = date_dt + pd.offsets.QuarterEnd()
+    return next_quarter_date.strftime('%Y%m%d')
+
+def QA_SU_save_stock_financial(client=DATABASE):
+    df = ts.get_stock_basics()
+
+    coll_stock_fin = client.stock_financial_ts
+    coll_stock_fin.create_index([("ts_code", pymongo.ASCENDING), ("date_stamp", pymongo.ASCENDING)])
+
+    err = []
+
+    def saving_work(code, coll_stock_fin):
+        try:
+            QA_util_log_info('Now Saving Financial ==== %s' % (code))
+
+            code = convert_fin_code(code)
+
+            ref = coll_stock_fin.find({'ts_code': str(code)})
+            end_date = str(now_time())[:10]
+            end_date = date_str_wo_dash(end_date)
+
+            if ref.count() > 0:
+                start_date = ref[ref.count() - 1]['end_date'] # bwang: date here is end_date in table
+                start_date = get_next_quarter_date(start_date)
+                if int(start_date) <= int(end_date):
+                    QA_util_log_info('UPDATE_STOCK_FINANCIAL \n Trying updating {} from {} to {}'.format(
+                                        code, start_date, end_date))
+
+                    data_json = QA_fetch_get_stock_financial(str(code), start=start_date, end=end_date, type_='json')
+                    if data_json is not None:
+                        coll_stock_fin.insert_many(data_json)
+            else:
+                start_date = date_str_wo_dash('1990-01-01')
+                data_json = QA_fetch_get_stock_financial(str(code), start=start_date, end=end_date, type_='json')
+                if data_json is not None:
+                    coll_stock_fin.insert_many(data_json)
+        except Exception as e:
+            QA_util_log_info('error in saving financial ==== %s' % str(code))
+            err.append(code)
+            print("The exception is {}".format(str(e)))
+
+    #saving_work('002230', coll_stock_fin)
+
+    # bwang: multi-thread
+    executor = ThreadPoolExecutor(max_workers=30)
+    res = {executor.submit(saving_work,  df.index[i_], coll_stock_fin) for i_ in range(len(df.index))}
+
+    count = 0
+    for i_ in concurrent.futures.as_completed(res):
+        QA_util_log_info('The {} of Total {}'.format(count+1, len(df.index)))
+
+        strProgress = 'DOWNLOAD PROGRESS {} '.format(str(float((count+1) / len(df.index) * 100))[0:4] + '%')
+        intProgress = int((count+1) / len(df.index) * 10000.0)
+        QA_util_log_info(strProgress, ui_progress_int_value=intProgress)
+        count = count + 1
+    if len(err) < 1:
+        QA_util_log_info('SUCCESS')
+    else:
+        QA_util_log_info(' ERROR CODE \n ')
+        QA_util_log_info(err)
+
+def QA_SU_save_stock_basics(client=DATABASE):
+    df = ts.get_stock_basics()
+    coll_stock_basics = client.stock_basics_ts
+    coll_stock_basics.create_index([("ts_code", pymongo.ASCENDING), ("date_stamp", pymongo.ASCENDING)])
+
+    err = []
+
+    def saving_work(code, coll_stock_basics):
+        try:
+            QA_util_log_info('Now Saving ==== %s' % (code))
+
+            ref = coll_stock_basics.find({'ts_code': str(code)[:6]})
+            end_date = str(now_time())[:10]
+
+            if ref.count() > 0:
+                start_date = ref[ref.count() - 1]['date']
+                QA_util_log_info('UPDATE_STOCK_DAY \n Trying updating {} from {} to {}'.format(
+                                    code, start_date, end_date))
+                if start_date != end_date:
+                    start_date = QA_util_get_next_day(start_date)
+                    QA_util_log_info('UPDATE_STOCK_DAY \n Trying updating {} from {} to {}'.format(
+                                    code, start_date, end_date))
+                    data_json = QA_fetch_get_stock_day(str(code), start=start_date, end=end_date, type_='json')
+                    coll_stock_basics.insert_many(data_json)
+            else:
+                start_date = '1990-01-01'
+                data_json = QA_fetch_get_stock_day(str(code), start=start_date, type_='json')
+                coll_stock_basics.insert_many(data_json)
+        except Exception as e:
+            QA_util_log_info('error in saving ==== %s' % str(code))
+            err.append(code)
+            print("The exception is {}".format(str(e)))
+
+    # bwang: multi-thread
+    executor = ThreadPoolExecutor(max_workers=30)
+    res = {executor.submit(saving_work,  df.index[i_], coll_stock_basics) for i_ in range(len(df.index))}
+
+    count = 0
+    for i_ in concurrent.futures.as_completed(res):
+        QA_util_log_info('The {} of Total {}'.format(count+1, len(df.index)))
+
+        strProgress = 'DOWNLOAD PROGRESS {} '.format(str(float((count+1) / len(df.index) * 100))[0:4] + '%')
+        intProgress = int((count+1) / len(df.index) * 10000.0)
+        QA_util_log_info(strProgress, ui_progress_int_value=intProgress)
+        count = count + 1
+    if len(err) < 1:
+        QA_util_log_info('SUCCESS')
+    else:
+        QA_util_log_info(' ERROR CODE \n ')
+        QA_util_log_info(err)
 
 def QA_SU_save_index_day(client=DATABASE):
     index_list = ['000001', '399001', '399005', '399006']
@@ -195,7 +339,7 @@ def QA_SU_save_stock_terminated(client=DATABASE):
     # 🛠todo 已经失效从wind 资讯里获取
     # 这个函数已经失效
     print("！！！ tushare 这个函数已经失效！！！")
-    df = QATs.get_terminated()
+    df = ts.get_terminated()
     #df = QATs.get_suspended()
     print(" Get stock terminated from tushare,stock count is %d  (终止上市股票列表)" % len(df))
     coll = client.stock_terminated
@@ -239,7 +383,7 @@ def QA_SU_save_stock_info_tushare(client=DATABASE):
     :param client:
     :return:
     '''
-    df = QATs.get_stock_basics()
+    df = ts.get_stock_basics()
     print(" Get stock info from tushare,stock count is %d" % len(df))
     coll = client.stock_info_tushare
     client.drop_collection(coll)

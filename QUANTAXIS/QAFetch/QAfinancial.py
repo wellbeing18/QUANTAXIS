@@ -95,7 +95,9 @@ def download_financialzip():
     result = get_filename()
     res = []
     for item, md5 in result:
-        if item in os.listdir(download_path) and md5==QA_util_file_md5('{}{}{}'.format(download_path,os.sep,item)):
+        #if item in os.listdir(download_path) and md5==QA_util_file_md5('{}{}{}'.format(download_path,os.sep,item)):
+        old_md5 = QA_util_file_md5('{}{}{}'.format(download_path,os.sep,item))
+        if item in os.listdir(download_path) and md5 == old_md5:
             
             print('FILE {} is already in {}'.format(item, download_path))
         else:
@@ -129,7 +131,7 @@ def parse_all():
     return parse_filelist(filename)
 
 # bwang: report path
-sina_fin_path = "C:/Users/ben_msi/abu/data/download/sina/financial/"
+sina_fin_path = "D:/abu/data/download/sina/financial/"
 balance_path = sina_fin_path + 'balance/'
 profit_path = sina_fin_path + 'profit/'
 cashflow_path = sina_fin_path + 'cashflow/'

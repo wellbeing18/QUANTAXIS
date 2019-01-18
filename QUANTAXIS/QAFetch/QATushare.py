@@ -103,6 +103,59 @@ def QA_fetch_get_stock_day(name, start='', end='', if_fq='01', type_='pd'):
         data['date'] = data['date'].apply(lambda x: str(x)[0:10])
         return data
 
+def QA_fetch_get_stock_basics(name, start='', end='', if_fq='01', type_='pd'):  
+    if (len(name) != 6):
+        name = str(name)[0:6]
+
+    if str(if_fq) in ['qfq', '01']:
+        if_fq = 'qfq'
+    elif str(if_fq) in ['hfq', '02']:
+        if_fq = 'hfq'
+    elif str(if_fq) in ['bfq', '00']:
+        if_fq = 'bfq'
+    else:
+        QA_util_log_info('wrong with fq_factor! using qfq')
+        if_fq = 'qfq'
+
+    data = ts.get_k_data(str(name), start, end, ktype='D',
+                         autype=if_fq, retry_count=200, pause=0.005).sort_index()
+
+    data['date_stamp'] = data['date'].apply(lambda x: QA_util_date_stamp(x))
+    data['fqtype'] = if_fq
+    if type_ in ['json']:
+        data_json = QA_util_to_json_from_pandas(data)
+        return data_json
+    elif type_ in ['pd', 'pandas', 'p']:
+        data['date'] = pd.to_datetime(data['date'])
+        data = data.set_index('date', drop=False)
+        data['date'] = data['date'].apply(lambda x: str(x)[0:10])
+        return data
+
+def QA_fetch_get_stock_financial(name, start='', end='', type_='pd'):
+    if (len(name) != 9):
+        print("ts stock financial code is not correct {}".format(name))
+        return None
+
+    #ts.set_token('fe8b944048a6b1f1dd12a5896bde7048fcdf86b088f26534fd718a19')
+    pro = ts.pro_api(token='fe8b944048a6b1f1dd12a5896bde7048fcdf86b088f26534fd718a19')
+    data = pro.fina_indicator(ts_code=name, start_date=start, end_date=end)
+
+    if len(data) == 0:
+        return None
+
+    data['date'] = data['end_date'].apply(lambda x: str(pd.to_datetime(x))[:10])
+    data['date_stamp'] = data['date'].apply(lambda x: QA_util_date_stamp(x))
+    data = data.drop_duplicates(['ts_code', 'end_date'])
+
+    if type_ in ['json']:
+        data_json = QA_util_to_json_from_pandas(data)
+        return data_json
+    elif type_ in ['pd', 'pandas', 'p']:
+        data['date'] = pd.to_datetime(data['date'])
+        data = data.set_index('date', drop=False)
+        data['date'] = data['date'].apply(lambda x: str(x)[0:10])
+        return data
+
 def QA_fetch_get_index_day(name, start='', end='', type_='pd'):
     if (len(name) != 6):
         name = str(name)[0:6]

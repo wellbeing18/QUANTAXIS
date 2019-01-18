@@ -74,8 +74,8 @@ def QA_SU_save_stock_financial():
     save local financial files( from sina) to 3 tables
     """
     
-    stock_list = pickle.load(open("C:/Users/ben_msi/abu/data/download/tdx/stock_list.pkl", 'rb'))
-    #stock_list = ['000005']
+    #stock_list = pickle.load(open("D:/abu/data/download/tdx/stock_list.pkl", 'rb'))
+    stock_list = ['000005']
     coll_balance = DATABASE.fin_balance_cn
     coll_balance.create_index([("code", ASCENDING)])
     coll_profit = DATABASE.fin_profit_cn
@@ -100,11 +100,11 @@ def QA_SU_save_stock_financial():
             err.append((code, report_type))
 
     futures = []
-    executor = ThreadPoolExecutor(max_workers=10)
+    executor = ThreadPoolExecutor(max_workers=2)
     for code in stock_list:
         futures.append(executor.submit(_saving_work, code, 'balance', coll_balance))
-        futures.append(executor.submit(_saving_work, code, 'profit', coll_profit))
-        futures.append(executor.submit(_saving_work, code, 'cashflow', coll_cashflow))
+        #futures.append(executor.submit(_saving_work, code, 'profit', coll_profit))
+        #futures.append(executor.submit(_saving_work, code, 'cashflow', coll_cashflow))
 
     count = 0
     for i in concurrent.futures.as_completed(futures):

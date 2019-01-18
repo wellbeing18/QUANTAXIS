@@ -43,7 +43,12 @@ from QUANTAXIS.QAFetch.QAQuery import (QA_fetch_index_day,
                                        QA_fetch_financial_report,
                                        QA_fetch_stock_list,
                                        QA_fetch_index_list,
-                                       QA_fetch_future_list
+                                       QA_fetch_future_list,
+                                       QA_fetch_fin_indicator,
+                                       QA_fetch_tech_indicator,
+                                       QA_fetch_stock_pure_tech_indicator,
+                                       QA_fetch_tech_indicator_normalized,
+                                       QA_fetch_stock_fin_indicator_ts
                                        )
 from QUANTAXIS.QAUtil.QADate import month_data
 from QUANTAXIS.QAUtil import (DATABASE, QA_Setting, QA_util_date_stamp,
@@ -95,12 +100,13 @@ def QA_fetch_stock_day_adv(
     :return: 如果股票代码不存 或者开始结束日期不存在 在返回 None ，合法返回 QA_DataStruct_Stock_day 数据
     '''
     '获取股票日线'
-    end = start if end is None else end
-    start = str(start)[0:10]
-    end = str(end)[0:10]
+    #end = start if end is None else end
+    #start = str(start)[0:10]
+    #end = str(end)[0:10]
 
     if start == 'all':
         start = '1990-01-01'
+    if end is None:
         end = str(datetime.date.today())
 
     res = QA_fetch_stock_day(code, start, end, format='pd')
@@ -132,12 +138,13 @@ def QA_fetch_stock_day_ts_adv(
     :return: 如果股票代码不存 或者开始结束日期不存在 在返回 None ，合法返回 QA_DataStruct_Stock_day 数据
     '''
     '获取股票日线'
-    end = start if end is None else end
-    start = str(start)[0:10]
-    end = str(end)[0:10]
+    #end = start if end is None else end
+    #start = str(start)[0:10]
+    #end = str(end)[0:10]
 
     if start == 'all':
         start = '1990-01-01'
+    if end is None:
         end = str(datetime.date.today())
 
     res = QA_fetch_stock_day_ts(code, start, end, format='pd')
@@ -169,12 +176,13 @@ def QA_fetch_index_day_ts_adv(
     :return: 如果股票代码不存 或者开始结束日期不存在 在返回 None ，合法返回 QA_DataStruct_Stock_day 数据
     '''
     '获取股票日线'
-    end = start if end is None else end
-    start = str(start)[0:10]
-    end = str(end)[0:10]
+    #end = start if end is None else end
+    #start = str(start)[0:10]
+    #end = str(end)[0:10]
 
     if start == 'all':
         start = '1990-01-01'
+    if end is None:
         end = str(datetime.date.today())
 
     res = QA_fetch_index_day_ts(code, start, end, format='pd')
@@ -189,6 +197,121 @@ def QA_fetch_index_day_ts_adv(
         #     print("QA Error QA_fetch_stock_day_adv set index 'datetime, code' return None")
         #     return None
         return res_reset_index
+
+def QA_fetch_stock_fin_indicator_adv(
+        code,
+        start='all', end=None,
+        keys='all',
+        if_drop_index=False):
+
+    #end = start if end is None else end
+    #start = str(start)[0:10]
+    #end = str(end)[0:10]
+
+    if start == 'all':
+        start = '1990-01-01'
+    if end is None:
+        end = str(datetime.date.today())
+    
+    res = QA_fetch_fin_indicator(code, start, end, keys, format='pd')
+    if res is None:
+        print("QA Error QA_fetch_stock_fin_indicator_adv parameter code=%s , start=%s, end=%s call QA_fetch_stock_fin_indicator return None" % (
+            code, start, end))
+        return None
+    else:
+        res_reset_index = res.set_index(['date'], drop=if_drop_index)
+        return res_reset_index
+
+def QA_fetch_stock_tech_indicator_adv(
+        code,
+        start='all', end=None,
+        keys='all',
+        if_drop_index=False):
+
+    #end = start if end is None else end
+    #start = str(start)[0:10]
+    #end = str(end)[0:10]
+
+    if start == 'all':
+        start = '1990-01-01'
+    if end is None:
+        end = str(datetime.date.today())
+    
+    res = QA_fetch_tech_indicator(code, start, end, keys, format='pd')
+    if res is None:
+        #print("QA Error QA_fetch_stock_tech_indicator_adv parameter code=%s , start=%s, end=%s call QA_fetch_stock_fin_indicator return None" % (code, start, end))
+        return None
+    else:
+        #res_reset_index = res.set_index(['date'], drop=if_drop_index)
+        #return res_reset_index
+        return res
+
+def QA_fetch_stock_pure_tech_indicator_adv(
+        code,
+        start='all', end=None,
+        vol='non-zero',
+        keys='all',
+        if_drop_index=False):
+
+    #end = start if end is None else end
+    #start = str(start)[0:10]
+    #end = str(end)[0:10]
+
+    if start == 'all':
+        start = '1990-01-01'
+    if end is None:
+        end = str(datetime.date.today())
+    
+    res = QA_fetch_stock_pure_tech_indicator(code, start, end, vol, keys, format='pd')
+    if res is None:
+        #print("QA Error QA_fetch_stock_pure_tech_indicator parameter code=%s , start=%s, end=%s call QA_fetch_stock_fin_indicator return None" % (code, start, end))
+        return None
+    else:
+        #res_reset_index = res.set_index(['date'], drop=if_drop_index)
+        #return res_reset_index
+        return res
+
+def QA_fetch_stock_fin_indicator_ts_adv(
+        code,
+        start='all', end=None,
+        cols='all',
+        if_drop_index=False):
+    
+    if start == 'all':
+        start = '1990-01-01'
+    if end is None:
+        end = str(datetime.date.today())
+    
+    res = QA_fetch_stock_fin_indicator_ts(code, start, end, format='pd')
+    if res is None:
+        #print("QA Error QA_fetch_stock_pure_tech_indicator parameter code=%s , start=%s, end=%s call QA_fetch_stock_fin_indicator return None" % (code, start, end))
+        return None
+    else:
+        #res_reset_index = res.set_index(['date'], drop=if_drop_index)
+        #return res_reset_index
+        return res
+
+def QA_fetch_stock_tech_indicator_normalized_adv(
+        code,
+        start='all', end=None,
+        keys='all',
+        if_drop_index=False):
+
+
+    if start == 'all':
+        start = '1990-01-01'
+    if end is None:
+        end = str(datetime.date.today())
+    
+    res = QA_fetch_tech_indicator_normalized(code, start, end, keys, format='pd')
+    if res is None:
+        print("QA Error QA_fetch_stock_tech_indicator_adv parameter code=%s , start=%s, end=%s call QA_fetch_stock_fin_indicator return None" % (
+            code, start, end))
+        return None
+    else:
+        #res_reset_index = res.set_index(['date'], drop=if_drop_index)
+        #return res_reset_index
+        return res
 
 def QA_fetch_stock_min_adv(
         code,
